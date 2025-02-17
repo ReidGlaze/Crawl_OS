@@ -13,10 +13,17 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Debug - Check Directory Structure
+        run: |
+          echo "Current Directory:"
+          pwd
+          echo "List Files:"
+          ls -lah
+
       - name: Set Up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.9"  # Adjust based on your requirements
+          python-version: "3.9"
 
       - name: Install Dependencies
         run: |
@@ -29,6 +36,12 @@ jobs:
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
           echo "SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}" >> .env
           echo "LLM_MODEL=${{ secrets.LLM_MODEL }}" >> .env
+          cat .env  # Debugging - Check .env file
+
+      - name: Debug - Confirm `crawl.py` Exists
+        run: |
+          ls -lah
+          test -f crawl.py && echo "crawl.py found" || echo "crawl.py NOT FOUND"
 
       - name: Run Script
-        run: python script.py
+        run: python crawl.py
