@@ -66,7 +66,7 @@ This project crawls OnTheSnow.com to collect ski resort data including snowfall 
 1. Ensure your virtual environment is activated
 2. Run the crawler:
    ```bash
-   python NOPROXY2.py
+   python crawl.py
    ```
 
 The crawler will process all URLs in `USACANADA.txt` in batches of 3 resorts at a time.
