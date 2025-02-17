@@ -3,4 +3,4 @@ Crawl4ai==0.4.247
 supabase==2.11.0
 openai==1.59.6
 beautifulsoup4==4.12.3
-playwright==1.42.0
+playwright>=1.49.0
