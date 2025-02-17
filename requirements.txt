@@ -1,0 +1,5 @@
+python-dotenv==1.0.1
+Crawl4ai==0.4.247
+supabase==2.11.0
+openai==1.59.6
+beautifulsoup4==4.12.3
