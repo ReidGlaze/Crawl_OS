@@ -37,37 +37,51 @@ async def extract_snow_info_batch(urls: List[str], html_contents: List[str]) -> 
         for url, html in zip(urls, html_contents):
             # Extract only the relevant content using CSS selector
             report_content = extract_report_content(html)
-            prompt = f"""Extract the following information from this ski resort webpage content. Return numbers for snowfall and snow depth (convert text numbers to digits), but keep lifts and runs as text. Return null if not found.
+            prompt = f"""Extract the following information from this ski resort webpage content, paying special attention to the snowfall data which MUST be read from LEFT to RIGHT on the page. Return numbers for snowfall and snow depth (convert text numbers to digits and ROUND ALL SNOWFALL VALUES TO THE NEAREST INTEGER), but keep lifts and runs as text. Return null if not found.
 
 1. Resort Name (text)
-2. Past Snowfall (in inches, for last 6 days)
-3. Forecasted Snowfall (in inches, for next 6 days)
-4. Mid Mountain Snow Depth (in inches)
+2. Past and Current Snowfall (in inches, reading from LEFT to RIGHT on the page, ROUND ALL VALUES TO NEAREST INTEGER):
+   - Leftmost value is "Snowfall 5 days ago"
+   - Next value is "Snowfall 4 days ago"
+   - Next value is "Snowfall 3 days ago"
+   - Next value is "Snowfall 2 days ago"
+   - Next value is "Snowfall 1 day ago"
+   - Rightmost value is "24 hr snowfall"
+
+3. Future Snowfall Forecast (in inches, reading from LEFT to RIGHT on the page, ROUND ALL VALUES TO NEAREST INTEGER):
+   - Leftmost value is "Snowfall forecasted today"
+   - Next value is "Snowfall forecasted in 1 day"
+   - Next value is "Snowfall forecasted in 2 days"
+   - Next value is "Snowfall forecasted in 3 days"
+   - Next value is "Snowfall forecasted in 4 days"
+   - Rightmost value is "Snowfall forecasted in 5 days"
+
+4. Mid Mountain Snow Depth (in inches, rounded to nearest integer)
 5. Number of Lifts Open (keep as text, e.g. "5/8 Lifts Open")
 6. Number of Runs Open (keep as text, e.g. "20/35 Runs Open")
 
 Content: {report_content}
 
-Format your response as a JSON object with these exact keys:
+Format your response as a JSON object with these exact keys, maintaining the LEFT to RIGHT order:
 {{
     "Ski Resort": "name",
-    "Snowfall 6 days ago": number,
-    "Snowfall 5 days ago": number,
-    "Snowfall 4 days ago": number,
-    "Snowfall 3 days ago": number,
-    "Snowfall 2 days ago": number,
-    "Snowfall 1 day ago": number,
-    "Snowfall forecasted today": number,
-    "Snowfall forecasted in 1 day": number,
-    "Snowfall forecasted in 2 days": number,
-    "Snowfall forecasted in 3 days": number,
-    "Snowfall forecasted in 4 days": number,
-    "Snowfall forecasted in 5 days": number,
-    "Mid Mountain Snow": number,
+    "Snowfall 5 days ago": rounded_integer,
+    "Snowfall 4 days ago": rounded_integer,
+    "Snowfall 3 days ago": rounded_integer,
+    "Snowfall 2 days ago": rounded_integer,
+    "Snowfall 1 day ago": rounded_integer,
+    "24 hr snowfall": rounded_integer,
+    "Snowfall forecasted today": rounded_integer,
+    "Snowfall forecasted in 1 day": rounded_integer,
+    "Snowfall forecasted in 2 days": rounded_integer,
+    "Snowfall forecasted in 3 days": rounded_integer,
+    "Snowfall forecasted in 4 days": rounded_integer,
+    "Snowfall forecasted in 5 days": rounded_integer,
+    "Mid Mountain Snow": rounded_integer,
     "Lifts Open": "text",
     "Runs Open": "text"
 }}
-Use null for any missing values. Convert snow measurements to integers, but keep lifts and runs as text."""
+Use null for any missing values. Convert and round all snow measurements to integers (e.g., 5.6" becomes 6, 5.4" becomes 5), but keep lifts and runs as text. Remember to maintain the LEFT to RIGHT order when reading values from the page."""
             prompts.append(prompt)
 
         # Process prompts in parallel
@@ -76,7 +90,7 @@ Use null for any missing values. Convert snow measurements to integers, but keep
             task = openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that extracts ski resort information from webpage content."},
+                    {"role": "system", "content": "You are a helpful assistant that extracts ski resort information from webpage content. Always read snowfall data from LEFT to RIGHT on the page and round all snowfall measurements to the nearest integer."},
                     {"role": "user", "content": prompt}
                 ],
                 response_format={"type": "json_object"}
@@ -91,6 +105,13 @@ Use null for any missing values. Convert snow measurements to integers, but keep
         for url, response in zip(urls, responses):
             try:
                 data = json.loads(response.choices[0].message.content)
+                # Ensure all numeric values are rounded to integers
+                for key, value in data.items():
+                    if key not in ["Ski Resort", "Lifts Open", "Runs Open"] and value is not None:
+                        try:
+                            data[key] = round(float(value))
+                        except (ValueError, TypeError):
+                            data[key] = None
                 results.append({"url": url, "data": data})
             except Exception as e:
                 print(f"Error processing GPT response for {url}: {str(e)}")
