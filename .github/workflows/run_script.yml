@@ -2,7 +2,7 @@ name: Run Python Script Twice Daily (Eastern Time)
 
 on:
   schedule:
-    - cron: "1 4,16 * * *"  # Runs at 12:01 AM/PM EDT (4:01/16:01 UTC)
+    # - cron: "1 4,16 * * *"  # COMMENTED OUT: Runs at 12:01 AM/PM EDT (4:01/16:01 UTC)
     - cron: "1 5,17 * * *"  # Runs at 12:01 AM/PM EST (5:01/17:01 UTC)
   workflow_dispatch:  # Allows manual triggering
 
